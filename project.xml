@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	
+	<meta title="OpenALEffectToLua" package="com.example.openaleffecttolua" version="1.0.0" company="Company Name" />
+	<app main="Main" path="Export" file="OpenALEffectToLua" />
+	
+	<window background="#666666" />
+	<window width="800" height="600" if="desktop"/>
+	
+	<source path="Source" />
+	
+	<haxelib name="openfl" />
+	<haxelib name="systools" />
+	
+	<assets path="Assets" rename="assets" exclude="openfl.svg" />
+	<assets path="Assets/template" rename="template"/>
+	<icon path="Assets/openfl.svg" />
+	
+</project>
