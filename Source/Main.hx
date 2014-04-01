@@ -99,18 +99,28 @@ class Main extends Sprite
 			// Manual clipboard paste on Windows
 			if (p_event.keyCode == Keyboard.V && p_event.ctrlKey)
 			{
-				_input.text = Clipboard.getText();
+				_input.text = "";
+				var temp :String = StringTools.replace(Clipboard.getText(), "\r", "");
+				_input.text = temp;
 			}
 		#end
 		if (p_event.keyCode == Keyboard.ENTER && !p_event.ctrlKey)
 		{
-			// Make sure this is a valid effect preset
-			var checkEffect :EReg = ~/^#define EFX_REVERB_PRESET_.*\{.*\}$/;
-			if (checkEffect.match(_input.text))
+			var allNames :Array<String> = new Array<String>();
+			
+			// Parse all valid effect presets
+			var checkEffect :EReg = ~/([vV]?#define EFX_REVERB_PRESET_[^\{]*\{.*\})/; 
+			var textToParse :String = _input.text;
+			while (textToParse != null)
 			{
-				// Get the name
+				// Continue parsing
+				if (!checkEffect.match(textToParse))
+					break;
+				textToParse = checkEffect.matchedRight();
+				
+				// Get the namea
 				var nameReg :EReg = ~/ EFX_REVERB_PRESET_[_A-Z]* /;
-				nameReg.match(_input.text);
+				nameReg.match(checkEffect.matched(1));
 				
 				var results :Results = new Results();
 				results.nameUpper = StringTools.replace(nameReg.matched(0), "EFX_REVERB_PRESET_", "");
@@ -121,33 +131,38 @@ class Main extends Sprite
 				{
 					results.nameCap += token.substr(0, 1).toUpperCase() + token.substr(1, token.length).toLowerCase(); 
 				}
-				
-				_result.text = results.nameUpper + " " + results.nameLower + " " + results.nameCap + "\n";
+				allNames.push(results.nameLower);
 				
 				// Get the numbers
 				var numbersReg :EReg = ~/([0-9]+\.[0-9]+)/;
-				var text :String = _input.text;
+				var text :String = checkEffect.matched(1);
 				while (text != null) 
 				{
 					if (!numbersReg.match(text))
 						break;
 					text = numbersReg.matchedRight();
 					results.numbers.push(Std.parseFloat(numbersReg.matched(1)));
-					_result.text += " " + numbersReg.matched(1);
+					/*_result.text += " " + numbersReg.matched(1);*/
 				}
 				
 				// Get the limit
 				var limitReg :EReg = ~/0x1/;
-				if (!limitReg.match(_input.text))
+				if (!limitReg.match(checkEffect.matched(1)))
 				{
 					results.hfLimit = false;
 				}
-				_result.text += "\n " + results.hfLimit;
+				/*_result.text += "\n " + results.hfLimit;*/
 				
 				// Create the effect file/clipboard
 				createEffectFile(results);
-			}
-		}
+			} // END single effect
+			
+			// Now, write additional files that include the lua lines to add the effects as environment effects
+			// And C++ code to select randomly from these effects
+			_result.text += "\n Written effect files to reverb<effectname>.lua.";
+			createAdditionFiles(allNames);
+			
+		} // END ENTER pressed
 	}
 	
 	/**
@@ -156,7 +171,7 @@ class Main extends Sprite
 	function createEffectFile(p_results :Results) :Void
 	{
 		// Get the template file
-		var finalText :String = Assets.getText("template/Template.lua");
+		var finalText :String = Assets.getText("template/effect.lua");
 		
 		// Replace names
 		finalText = StringTools.replace(finalText, "%name_cap%", p_results.nameCap);
@@ -196,7 +211,59 @@ class Main extends Sprite
 			}
 			
 			fileOut.close();
-			_result.text += "\n DONE! Written to file: " + "reverb" + p_results.nameLower + ".lua";
+		#end
+	}
+	
+	/**
+	 * Creates a file from the passed names that includes the lua script lines to add all effects, 
+	 * Also the C++ code to select a random effect amongst these.
+	 * @param	allNames
+	 */
+	function createAdditionFiles(p_allNames :Array<String>) :Void
+	{
+		// Get the template file
+		var templateLua :String = Assets.getText("template/addEffect.lua");
+		var finalTextCpp :String = Assets.getText("template/random.cpp");
+		
+		// Create the texts
+		var finalTextLua :String = "";
+		var cppNameList :String = "";
+		for (effectName in p_allNames)
+		{
+			// Append Lua text
+			finalTextLua += StringTools.replace(templateLua, "%name_lower%", effectName) + "\n";
+			
+			// Append cpp names
+			if (cppNameList == "")
+			{
+				cppNameList = "\"" + effectName + "\"";
+			}
+			else
+			{
+				cppNameList += ", " + "\"" + effectName + "\"";
+			}
+		}
+		
+		// Finalize cpp text
+		finalTextCpp = StringTools.replace(finalTextCpp, "%num_entries%", "" + p_allNames.length);
+		finalTextCpp = StringTools.replace(finalTextCpp, "%entries%", cppNameList);
+		
+		#if !flash
+			// On all file-writing targets, create the files and write to them
+			// Lua
+			var luaOut :FileOutput = File.write("addition.lua", false);
+			luaOut.writeString(finalTextLua);
+			luaOut.close();
+			
+			// Cpp
+			var cppOut :FileOutput = File.write("addition.cpp", false);
+			var lines :Array<String> = finalTextCpp.split("\n");
+			for (line in lines)
+			{
+				cppOut.writeString(line);
+			}
+			cppOut.close();
+			_result.text += "\n DONE! Written to addition.lua and addition.cpp.";
 		#end
 	}
 	

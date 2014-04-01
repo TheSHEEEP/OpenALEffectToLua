@@ -213,3 +213,14 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+Export/flash/haxe/ApplicationMain.hx
+Export/flash/haxe/DefaultAssetLibrary.hx
+Export/flash/haxe/NMEPreloader.hx
+Export/flash/haxe/debug.hxml
+Export/flash/haxe/release.hxml
+Export/windows/cpp/haxe/DefaultAssetLibrary.hx
+Export/windows/cpp/haxe/ApplicationMain.hx
+Export/windows/cpp/haxe/NMEPreloader.hx
+Export/windows/cpp/haxe/debug.hxml
+Export/windows/cpp/haxe/lime/AssetData.hx
+Export/windows/cpp/haxe/release.hxml
